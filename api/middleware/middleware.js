@@ -14,7 +14,7 @@ function validateUserId(req, res, next) {
     if (!user) {
       res.status(404).json({ message: "user not found" });
     } else {
-      user = req.user;
+      req.user = user;
       next();
     }
   })
