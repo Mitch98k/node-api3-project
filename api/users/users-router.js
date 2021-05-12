@@ -12,7 +12,6 @@ router.get('/', async (req, res) => {
   // RETURN AN ARRAY WITH ALL THE USERS
   try {
     const users = await Users.get();
-    console.log(users);
     res.status(200).json(users);
   } catch(err) {
     res.status(500).json({ message: "could not retrieve users" });
@@ -23,8 +22,8 @@ router.get('/:id', validateUserId, async (req, res) => {
   // RETURN THE USER OBJECT
   // this needs a middleware to verify user id
   try {
-    const User = await Users.getById(req.user.id);
-    res.status(200).json(User);
+    const user = await Users.getById(req.user.id);
+    res.status(200).json(user);
   } catch(err) {
     res.status(500).json({ message: "Could not retrieve user" });
   }
@@ -48,7 +47,8 @@ router.put('/:id', validateUserId, validateUser, async (req, res) => {
   // and another middleware to check that the request body is valid
   try {
     const {name} = req.body;
-    const updUser = await Users.update(req.user.id, {name});
+    await Users.update(req.user.id, {name});
+    const updUser = await Users.getById(req.user.id);
     res.status(200).json(updUser);
   } catch(err) {
     res.status(500).json({ message: "The user could not be updated" });
@@ -59,22 +59,38 @@ router.delete('/:id', validateUserId, async (req, res) => {
   // RETURN THE FRESHLY DELETED USER OBJECT
   // this needs a middleware to verify user id
   try {
-    const delUser = await Users.remove(req.user.id);
+    const delUser = await Users.getById(req.user.id);
+    await Users.remove(req.user.id);
     res.json(delUser);
   } catch(err) {
     res.status(500).json({ message: "The user could not be removed" });
   }
 });
 
-router.get('/:id/posts', (req, res) => {
+router.get('/:id/posts', validateUserId, async (req, res) => {
   // RETURN THE ARRAY OF USER POSTS
   // this needs a middleware to verify user id
+  try {
+    const posts = await Users.getUserPosts(req.user.id);
+    res.status(200).json(posts);
+  } catch(err) {
+    res.status(500).json({ message: `The posts from ${req.user.name} could not be retrieved` });
+  }
 });
 
-router.post('/:id/posts', (req, res) => {
+router.post('/:id/posts', validateUserId, validatePost, async (req, res) => {
   // RETURN THE NEWLY CREATED USER POST
   // this needs a middleware to verify user id
   // and another middleware to check that the request body is valid
+  try {
+    const text = req.body;
+    const user_id = req.params.id;
+    const post = {...text, user_id};
+    const newPost = await Posts.insert(post);
+    res.status(201).json(newPost);
+  } catch(err) {
+    res.status(500).json({ message: `The post for ${req.user.name} could not be created: ${err.message}` });
+  }
 });
 
 // do not forget to export the router
